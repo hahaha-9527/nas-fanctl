@@ -1,0 +1,23 @@
+{
+  "port": 9700,
+  "mode": "auto",
+  "interval": 2,
+  "failsafe_temp": 85,
+  "down_step": 5,
+  "min_change": 2,
+  "fans": [
+    {
+      "id": "hwmon2/pwm2",
+      "name": "CPU 风扇",
+      "group": "cpu",
+      "curve": [[40,30],[46,40],[55,52],[65,68],[75,85],[82,100]]
+    },
+    {
+      "id": "hwmon2/pwm3",
+      "name": "硬盘风扇",
+      "group": "hdd",
+      "curve": [[38,20],[50,25],[55,40],[60,55],[68,75],[75,100]]
+    }
+  ],
+  "enable_exec": true
+}

@@ -1,0 +1,9 @@
+{
+  "port": 9700,
+  "interval": 2,
+  "failsafe_temp": 85,
+  "down_step": 5,
+  "min_change": 2,
+  "fans": [],
+  "enable_exec": true
+}

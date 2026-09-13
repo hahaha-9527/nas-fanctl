@@ -1,0 +1,11 @@
+[Unit]
+Description=Load it87 for ITE fan chip (force_id 可按主板调整)
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/modprobe it87 force_id=0x8620
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

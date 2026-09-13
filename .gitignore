@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+
+# 发行产物（安装包 zip 通过 GitHub Releases 发布，不入库）
+*.zip
+
+# 运行时数据与备份
+fanctl.json.bak*
+*.bak
+*.bak-*
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

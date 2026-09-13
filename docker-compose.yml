@@ -1,0 +1,53 @@
+services:
+  fanctl:
+    # 默认走国内镜像加速（Docker Hub 直连经常超时：Client.Timeout exceeded）。
+    # 若该加速源不可用，换下面任意一行再试；海外网络可换回官方 python:3.12-slim-bookworm
+    image: docker.m.daocloud.io/library/python:3.12-slim-bookworm
+    # image: docker.1ms.run/library/python:3.12-slim-bookworm
+    # image: dockerpull.cn/library/python:3.12-slim-bookworm
+    # image: docker.1panel.live/library/python:3.12-slim-bookworm
+    container_name: fanctl
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    volumes:
+      - /:/host
+      - /sys:/sys
+    command:
+      - sh
+      - -c
+      - |
+        echo "===board: $$(cat /sys/class/dmi/id/board_vendor 2>/dev/null) | $$(cat /sys/class/dmi/id/board_name 2>/dev/null)"
+
+        # ---- 1) 安装 kmod（镜像内不带 modprobe）----
+        if ! command -v modprobe >/dev/null 2>&1; then
+          for m in mirrors.ustc.edu.cn mirrors.aliyun.com; do
+            sed -i "s#deb.debian.org#$$m#g" /etc/apt/sources.list.d/debian.sources 2>/dev/null
+            apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq kmod >/dev/null 2>&1 && break
+          done
+        fi
+
+        # ---- 2) 加载风扇驱动（已有则跳过；nct6775 / it87 多 force_id 逐个尝试）----
+        have_chip() { grep -qiE "it86|it87|nct67" /sys/class/hwmon/hwmon*/name 2>/dev/null; }
+        if ! have_chip; then
+          modprobe -d /host nct6775 2>/dev/null
+          if have_chip; then echo "===driver: nct6775"; else
+            ok=""
+            for id in 0x8620 0x8728 0x8665 0x8613 0x8712 0x8762 0x8603; do
+              modprobe -d /host it87 force_id=$$id 2>/dev/null
+              if have_chip; then echo "===driver: it87 force_id=$$id"; ok=1; break; fi
+            done
+            [ -z "$$ok" ] && echo "===driver: 未能加载（fanctl 仍会启动，可在页面/README 排查）"
+          fi
+        else
+          echo "===driver: 风扇芯片驱动已存在"
+        fi
+
+        # ---- 3) 定位 fanctl.py 并启动（含回收站排除）----
+        APP=$$(find /host/pool /host/volume1 /host/volume2 /host/vol1 /host/mnt /host/media /host/srv -maxdepth 9 -name fanctl.py 2>/dev/null | grep -v recycle | head -n1)
+        [ -z "$$APP" ] && APP=$$(timeout 90 find /host -xdev -name fanctl.py 2>/dev/null | grep -v recycle | head -n1)
+        [ -z "$$APP" ] && { echo "===NOT-FOUND: 请把 fanctl.py 与 fanctl.json 放入本 compose 项目目录后重建容器"; sleep infinity; exit 0; }
+        echo "===FOUND: $$APP"
+        APPDIR=$$(dirname "$$APP")
+        [ -f "$$APPDIR/fanctl.json" ] || echo '{"port":9700,"interval":2,"failsafe_temp":85,"down_step":5,"min_change":2,"fans":[],"enable_exec":true}' > "$$APPDIR/fanctl.json"
+        exec python3 "$$APP" --config "$$APPDIR/fanctl.json" --sysfs-root /sys
