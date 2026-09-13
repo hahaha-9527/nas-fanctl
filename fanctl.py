@@ -49,7 +49,7 @@ DEFAULT_TEMPLATE = {
 CPU_CHIP_HINTS = ("coretemp", "k10temp", "zenpower", "cpu")
 DEFAULT_PORT = 9700
 # 版本号：v1.<迭代次数>。2026-09-13 项目创建当日完成 70 次已部署迭代
-VERSION = "v1.70"
+VERSION = "v1.71"
 
 
 def log(msg):
@@ -1305,13 +1305,14 @@ class ApiHandler(BaseHTTPRequestHandler):
         elif self.path == "/api/config":
             with self.ctl.lock:
                 self._json(self.ctl.cfg)
-        elif self.path == "/icon.svg" or self.path == "/favicon.ico":
-            # 应用图标（ZeroNAS 桌面快捷方式引用）
+        elif self.path.split("?")[0] in ("/icon.svg", "/icon2.svg", "/favicon.ico"):
+            # 应用图标（ZeroNAS 桌面快捷方式引用）；icon2.svg 是换路径用的缓存穿透别名
+            # （部分 APP 图片加载器不支持带 ? 参数的 URL，只能换路径强制重新拉取）
             body = FAN_ICON_SVG.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "image/svg+xml")
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "max-age=3600")
+            self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             self.wfile.write(body)
         else:
