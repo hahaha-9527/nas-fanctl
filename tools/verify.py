@@ -2,7 +2,7 @@
 """fanctl 安装/重启后验证
 
 用法:
-    python verify.py http://192.168.18.233:9700
+    python verify.py http://NAS_IP:9700
 
 检查项:
     1. NAS 是否在线

@@ -1,43 +1,8 @@
-# fanctl — NAS 风扇温度调速（铁牛OS / 铁牛NAS / ZeroNAS）
+# fanctl — NAS 风扇调速安装包
 
-> 单文件、零依赖的 NAS 风扇调速守护进程 + Web 控制台，按温度曲线自动调速。
-
-纯 Python 标准库实现（无需 pip 安装任何包），提供一个可视化 Web 界面（默认 9700 端口），
-把机箱风扇的转速与你 NAS 的 CPU / 硬盘温度联动起来。已在 Centerm Zero 1 Pro（ITE IT8620E）
-上长期稳定运行，理论上适用于任何带 Docker 的 x86 NAS —— **铁牛OS（铁牛NAS / ZeroNAS）**、
-群晖 DSM、威联通 QTS、TrueNAS、UNRAID、PVE 及自建 x86 NAS 均可使用。
-
-## 功能特性
-
-- **温度联动调速**：CPU 温度与全部在位 SATA 硬盘最高温双通道采集，升温立即响应、降温缓降防抖、超温紧急全速保护。
-- **三档独立功率曲线**：自动 / 静音 / 均衡三档各自独立曲线并持久保存，全速为临时档；页头一键切换。
-- **曲线可视化编辑**：网页端直接拖拽调整 温度→PWM 曲线拐点，所见即所得。
-- **联动温度可选**：每个风扇可独立选择按 CPU 或硬盘温度调速，适配各种装机布局。
-- **单风扇手动定速**：临时接管某个风扇，切档自动释放。
-- **一键恢复默认**：随时重置曲线与全局参数，配置原子写入并自动备份。
-- **驱动自愈**：`it87` / `nct6775` 自动加载，compose 启动 + 宿主机 systemd + 容器内自愈三层保障，重启不丢驱动。
-- **安全保护**：检测到 0 个可用 PWM 通道时拒绝写入并保留原配置。
-- **体验细节**：深浅色主题、手机端自适应、铁牛OS / ZeroNAS 桌面图标一键注册。
-
-## 适用机型与系统
-
-在 **Centerm Zero 1 Pro** 上开发并长期实机运行，已验证 / 可用的平台：
-
-| 平台 / 系统 | 支持情况 |
-|---|---|
-| **铁牛OS · 铁牛NAS · ZeroNAS**（Centerm Zero 系列） | ⭐ 原生支持：Docker Compose 一键部署、`tools/register_icon.py` 一键注册桌面图标、应用中心信息登记，且已适配**铁牛link 远程访问**（图标与页面内外网均可正常加载） |
-| Centerm Zero 1 Pro（ITE IT8620E） | ✅ 实测机型，`fanctl.json.example` 即本机调优配置 |
-| 群晖 DSM / 威联通 QTS | ✅ 有 Docker + ITE `it87` / Nuvoton `nct6775` 风扇芯片即可，按本文步骤自行适配 |
-| TrueNAS / UNRAID / PVE / 自建 x86 NAS | ✅ 同上，只需 root 与 Docker |
-
-> 搜索关键词：铁牛 NAS、铁牛NAS、铁牛OS、tieniu nas、ZeroNAS 风扇调速、NAS 风扇温控、
-> it87 风扇控制、群晖风扇调速、NAS 风扇自动调速、机箱风扇 PWM 调速。
-
-## 环境要求
-
-- x86 NAS，已安装 Docker / Docker Compose
-- 主板风扇控制芯片为 ITE `it87` 或 Nuvoton `nct6775` 系列（大多数消费级 x86 主板都属这两类）
-- 需要 **root / privileged** 权限（写 PWM 与加载内核模块）
+纯标准库 Python 风扇调速守护进程 + Web 界面（端口 9700），支持温度曲线联动、手动调速、
+SATA SMART / NVMe 温度采集、深浅色主题、手机自适应。已在 Centerm Zero 1 Pro（IT8620E）
+上长期稳定运行，理论上适用于任何带 Docker 的 x86 NAS（ZeroNAS / 群晖 / 威联通 / 自建）。
 
 ## 包内容
 
@@ -47,13 +12,11 @@
 | `docker-compose.yml` | Compose 编排：自动装 kmod → 自动加载驱动 → 自动定位主程序 |
 | `fanctl.json` | 初始配置（fans 为空，装好后用页面"自动检测"生成） |
 | `fanctl.json.example` | Zero 1 Pro 实测配置示例（双风扇曲线，可参考） |
-| `tools/register_icon.py` | 注册铁牛OS / ZeroNAS 桌面"风扇调速"图标 + 快捷方式 |
+| `tools/register_icon.py` | 注册 ZeroNAS 桌面"风扇调速"图标 + 快捷方式 |
 | `tools/verify.py` | 安装/重启后一键验证 |
 | `optional/it87-load.service` | 可选：宿主机开机加载驱动 systemd 服务 |
-| `CHANGELOG.md` | 版本更新记录 |
-| `LICENSE` | MIT 开源许可 |
 
-## 安装步骤（铁牛OS / ZeroNAS）
+## 安装步骤（ZeroNAS）
 
 ### 1. 创建 Compose 项目
 ZeroNAS 网页 → Docker → Compose 项目 → 新建，项目名 `nas-fanctl`，
@@ -79,7 +42,7 @@ ZeroNAS 文件管理器，把 `fanctl.py` 和 `fanctl.json` 上传到
 3. 改名 + 勾选联动组（CPU 温度 / SATA 硬盘温度），调整曲线并保存；
 4. 曲线参考：CPU 风扇 40°C→30%，82°C→100%；硬盘风扇 38°C→20%，78°C→100%。
 
-### 5. 注册桌面图标（铁牛OS / ZeroNAS）
+### 5. 注册桌面图标（ZeroNAS）
 在你自己的电脑上执行（需要 Python 3）：
 ```
 python tools/register_icon.py http://NAS_IP:9700
@@ -126,15 +89,3 @@ python tools/verify.py http://NAS_IP:9700
 
 **升级 fanctl.py** → 直接替换项目目录里的 fanctl.py，重建容器即可；配置不受影响
 （配置写入为原子操作并自动留 .bak 备份）。
-
-## 版本记录
-
-各版本的新增与修复详见 [CHANGELOG.md](CHANGELOG.md)。
-
-## 许可
-
-[MIT](LICENSE) © 2026 西了个瓜
-
-> 本项目在真实硬件上反复调试而成，曲线默认值是针对 Centerm Zero 1 Pro（4 盘位、后方 14cm 风扇）
-> 的实测调优结果，其他机型请以实际听感和温度为准自行微调。
-
