@@ -49,7 +49,7 @@ DEFAULT_TEMPLATE = {
 CPU_CHIP_HINTS = ("coretemp", "k10temp", "zenpower", "cpu")
 DEFAULT_PORT = 9700
 # 版本号：v1.<迭代次数>。2026-09-13 项目创建当日完成 70 次已部署迭代
-VERSION = "v1.71"
+VERSION = "v1.72"
 
 
 def log(msg):
@@ -919,6 +919,12 @@ WEB_HTML = r"""<!DOCTYPE html>
   .presets button+button{border-left:1px solid var(--line)}
   .presets button:hover{color:var(--txt)}
   .presets button.on{background:var(--accent);color:#fff;font-weight:600}
+  /* 联动温度分段选择（曲线卡内，每个风扇独立设置） */
+  .seglink{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .seglink button{background:transparent;color:var(--dim);border:none;padding:3px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:.15s}
+  .seglink button+button{border-left:1px solid var(--line)}
+  .seglink button:hover{color:var(--txt)}
+  .seglink button.on{background:var(--accent);color:#fff;font-weight:600}
   /* 浅色主题：白底黑字，注释/辅助文字深灰 */
   body.light{
     --bg:#ffffff; --panel:#ffffff; --panel2:#f3f3f3; --line:#dcdcdc;
@@ -956,6 +962,14 @@ WEB_HTML = r"""<!DOCTYPE html>
           <span style="color:var(--dim);font-size:12px">风扇</span>
           <select id="fanSel"></select>
           <input type="text" id="fanName" style="flex:1;min-width:120px" placeholder="风扇名称">
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <span style="color:var(--dim);font-size:12px">联动温度</span>
+          <span class="seglink" id="grpSeg" title="该风扇按哪个温度调速：CPU=CPU 整体温度；硬盘=全部在位 SATA 硬盘的最高温（空盘位自动排除）">
+            <button data-g="cpu">CPU</button>
+            <button data-g="hdd">硬盘</button>
+          </span>
+          <span style="color:var(--dim);font-size:11.5px" id="grpHint"></span>
         </div>
         <svg id="curve" viewBox="0 0 640 330"></svg>
         <div class="hint">拖动圆点调整曲线 · 点击空白处加点 · 双击圆点删点 · 编辑的是当前档位的曲线，<kbd>保存</kbd> 后立即生效（热更新，无需重启）</div>
@@ -1115,12 +1129,27 @@ function loadSelected(){
   const f=cfg.fans[sel];if(!f)return;
   $('fanName').value=f.name||'';
   pts=curCurve(f).map(p=>[p[0],p[1]]);
+  // 联动温度分组回显：cpu/hdd 高亮对应按钮，未设置则两个都灰显
+  document.querySelectorAll('#grpSeg button').forEach(b=>b.classList.toggle('on',f.group===b.dataset.g));
+  $('grpHint').textContent=f.group?'':'未选择（沿用自动检测的传感器）';
   const m=status&&status.fans[sel];
   $('manOn').checked=m&&m.manual!=null;
   $('manVal').disabled=$('manApply').disabled=!$('manOn').checked;
   if(m&&m.manual!=null){$('manVal').value=m.manual;$('manShow').textContent=m.manual+'%';}
   drawCurve();
 }
+
+// 联动温度选择：写入当前风扇的 group，随「保存配置」落盘生效
+document.querySelectorAll('#grpSeg button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const f=cfg&&cfg.fans[sel];if(!f)return;
+    if(f.group===b.dataset.g)return;
+    f.group=b.dataset.g;
+    document.querySelectorAll('#grpSeg button').forEach(x=>x.classList.toggle('on',x===b));
+    $('grpHint').textContent='';
+    toast('✓ 联动温度已选为「'+(b.dataset.g==='cpu'?'CPU':'硬盘')+'」，点击 💾 保存配置 生效');
+  });
+});
 
 function selectFan(i){sel=i;loadSelected();}
 
