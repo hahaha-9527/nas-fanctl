@@ -1,4 +1,4 @@
-# fanctl — NAS 风扇温度调速
+# fanctl — NAS 风扇温度调速（铁牛OS / 铁牛NAS / ZeroNAS）
 
 > 单文件、零依赖的 NAS 风扇调速守护进程 + Web 控制台，按温度曲线自动调速。
 
