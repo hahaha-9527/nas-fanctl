@@ -3,6 +3,13 @@
 
 用法:
     python register_icon.py http://192.168.18.233:9700
+    python register_icon.py http://192.168.18.233:9700 https://tieniu.tieniu-link.com
+
+    第二个参数（可选）是公网访问基地址（如铁牛link 的域名）：
+      - 传了 → 图标登记为 绝对地址 base + /pc/fanctl-icon.svg，
+        手机 APP（原生图片加载器，不认相对路径）也能正常显示；
+      - 没传 → 图标登记为相对路径 /pc/fanctl-icon.svg，
+        网页端本地/远程都能显示，但手机 APP 图标会空白。
 
 要求:
     1. 目标 NAS 的 fanctl.json 中 enable_exec 为 true（模板配置已带）
@@ -11,7 +18,7 @@
     - 在应用中心注册 fanctl 应用（state=started, port=9700）
     - 为桌面用户添加快捷方式（自动探测已有 user_id，默认 1000）
     - 图标部署到 TOS 网页根目录 /usr/local/pc/fanctl-icon.svg，
-      应用中心登记为相对路径 /pc/fanctl-icon.svg —— 本地局域网和铁牛link
+      应用中心登记为 /pc/fanctl-icon.svg —— 本地局域网和铁牛link
       远程访问（https://xxx.tieniu-link.com/pc/index.html）都能正常加载，
       不再依赖内网 IP 直连（内网 IP 远程加载不到，图标会裂图）
     - 每次执行前自动备份 appstore.db -> appstore.db.bak-fanctl
@@ -26,6 +33,9 @@ if len(sys.argv) < 2:
     print(__doc__)
     sys.exit(1)
 HOST = sys.argv[1].rstrip("/")
+# 公网基地址（可选）：如 https://tieniu.tieniu-link.com
+# 手机 APP 必须用绝对地址，网页端两种都行
+PUBLIC = sys.argv[2].rstrip("/") if len(sys.argv) > 2 else ""
 
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
@@ -50,30 +60,22 @@ def run_remote_py(code):
         sys.exit(1)
 
 DESC_ZH = ("NAS 风扇转速监控与温度联动调速工具。支持 CPU 与 SATA 硬盘温度实时联动、"
+           "联动温度可选（每风扇独立选 CPU/硬盘）、"
            "三档独立功率曲线（自动/静音/均衡/全速）、单风扇手动定速、曲线可视化拖拽编辑；"
            "内置 it87/nct6775 驱动自动加载与开机自愈，深浅色主题，手机端自适应，"
            "可注册 ZeroNAS 桌面快捷图标。")
 DESC_EN = ("NAS fan speed monitoring with temperature-linked control. "
-           "CPU & SATA HDD temp tracking, three independent power curves "
+           "CPU & SATA HDD temp tracking, per-fan selectable linkage source (CPU/HDD), "
+           "three independent power curves "
            "(auto/silent/balance/full), per-fan manual override, visual curve editor, "
            "it87/nct6775 auto-loading with boot self-healing, light/dark themes, "
            "mobile-friendly UI, and a ZeroNAS desktop shortcut.")
-FEATURES_ZH = ("v1.71 重点功能：\n"
-               "· 三档独立功率曲线：自动/静音/均衡持久保存，全速为临时档，曲线可视化拖拽编辑\n"
-               "· 一键调速：页头分段按钮，档位随各风扇曲线等比适配\n"
-               "· 一键恢复默认：重置三档曲线、档位与全局参数\n"
-               "· 温度联动：CPU 温度 + 4×SATA 硬盘最高温（支持 6 盘位，M.2 展示不参与联动）\n"
-               "· 驱动自愈：it87/nct6775 自动加载、开机自愈、pwm 手动接管周期守护\n"
-               "· 深/浅色主题一键切换，页面 150% 缩放，手机端自适应\n"
-               "· 安全保护：0 通道检测拒绝执行，配置原子写入并自动备份")
-FEATURES_EN = ("v1.71 highlights:\n"
-               "- Three independent power curves (auto/silent/balance persistent, full temporary)\n"
-               "- One-tap presets that scale with each fan curve\n"
-               "- Factory reset for curves & settings\n"
-               "- Temp linking: CPU + hottest of 4 SATA disks (6-bay ready, M.2 display-only)\n"
-               "- Driver self-healing: it87/nct6775 auto-load & boot recovery\n"
-               "- Light/dark themes, 150% zoom, mobile responsive\n"
-               "- Safety: zero-channel detection guard, atomic config writes with backup")
+FEATURES_ZH = ("v1.72 更新内容：\n"
+               "· 联动温度可选：每个风扇独立选择按 CPU 或硬盘温度调速（适配不同装机布局）\n"
+               "· 远程访问修复：铁牛link 远程打开桌面时应用图标正常显示（图标改由 TOS 网页目录提供）")
+FEATURES_EN = ("v1.72 changes:\n"
+               "- Selectable linkage temp per fan (CPU or HDD) for different builds\n"
+               "- Remote access fix: desktop icon now loads via Tieniu-link (served from TOS web root)")
 
 CODE = r'''
 import sqlite3, json, time, shutil
@@ -88,10 +90,10 @@ cfg = {
     "version": {"lowVersion": "1.0.0", "version": "__APPVER__"},
     "languageList": ["zh-CN", "en-US"],
     "i18n": [
-        {"name": "风扇调速", "description": "__DESC_ZH__",
-         "author": "西了个瓜", "langName": "zh-CN", "versionContent": "__FEAT_ZH__"},
-        {"name": "Fan Control", "description": "__DESC_EN__",
-         "author": "西了个瓜", "langName": "en-US", "versionContent": "__FEAT_EN__"},
+        {"name": "风扇调速", "description": __DESC_ZH__,
+         "author": "西了个瓜", "langName": "zh-CN", "versionContent": __FEAT_ZH__},
+        {"name": "Fan Control", "description": __DESC_EN__,
+         "author": "西了个瓜", "langName": "en-US", "versionContent": __FEAT_EN__},
     ],
     "accessCtrl": {
         "urlAppAccesses": [
@@ -103,16 +105,20 @@ cfg = {
 cfg_str = json.dumps(cfg, ensure_ascii=False)
 NOW = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + ".000000000+08:00"
 
-# 图标地址：优先部署到 TOS 网页根目录并用相对路径（本地/铁牛link远程都能加载）；
-# 部署失败（目录不存在等）则回退为直连 URL
-ICON_REL = "/pc/fanctl-icon.svg"
+# 图标地址：部署到 TOS 网页根目录
+#   - 传了公网基地址 → 绝对地址（手机 APP 原生加载器也能取）
+#   - 没传 → 相对路径（网页端本地/远程都可，手机 APP 会空白）
+#   - 部署失败（目录不存在等）→ 回退为 fanctl 直连 URL
+ICON_PATH = "/pc/fanctl-icon.svg"
+ICON_PUB = "__ICONPUB__"
 try:
     import urllib.request as _u
     _svg = _u.urlopen("http://127.0.0.1:9700/icon2.svg", timeout=10).read()
     with open("/host/usr/local/pc/fanctl-icon.svg", "wb") as _f:
         _f.write(_svg)
-    ICON = ICON_REL
-    print("icon deployed -> /usr/local/pc/fanctl-icon.svg (%d bytes)" % len(_svg))
+    ICON = (ICON_PUB + ICON_PATH) if ICON_PUB else ICON_PATH
+    print("icon deployed -> /usr/local/pc/fanctl-icon.svg (%d bytes), icon_url=%s"
+          % (len(_svg), ICON))
 except Exception as _e:
     ICON = "__HOSTICON__"
     print("icon deploy failed (%s), fallback to direct URL" % _e)
@@ -143,8 +149,8 @@ row.update({
     "install_location": "",
     "download_url": "",
     "download_progress": 0,
-    "package_size": 31,          # 整数！Go 后端 int64 扫描，写小数会让整个应用列表接口崩掉
-    "latest_package_size": 31,   # 单位 KB，UI 显示 31.00 KB（安装包 zip 约 31KB）
+    "package_size": 33,          # 整数！Go 后端 int64 扫描，写小数会让整个应用列表接口崩掉
+    "latest_package_size": 33,   # 单位 KB，UI 显示 33.00 KB（v1.72 zip 实测 32.9KB）
     "carousel_img_urls": "",
     "latest_carousel_img_urls": "",
     "version": "__APPVER__",
@@ -185,15 +191,19 @@ print("DONE")
 '''
 
 CODE = (CODE
-        .replace("__APPVER__", "1.71")
-        .replace("__DESC_ZH__", DESC_ZH)
-        .replace("__DESC_EN__", DESC_EN)
-        .replace("__FEAT_ZH__", FEATURES_ZH)
-        .replace("__FEAT_EN__", FEATURES_EN)
+        .replace("__APPVER__", "1.72")
+        # 文本类占位符用 json.dumps 注入：自动转义换行/引号，
+        # 避免功能列表里的 \n 把远程代码的字符串字面量截断
+        .replace("__DESC_ZH__", json.dumps(DESC_ZH, ensure_ascii=False))
+        .replace("__DESC_EN__", json.dumps(DESC_EN, ensure_ascii=False))
+        .replace("__FEAT_ZH__", json.dumps(FEATURES_ZH, ensure_ascii=False))
+        .replace("__FEAT_EN__", json.dumps(FEATURES_EN, ensure_ascii=False))
         # 兜底直连 URL：用用户传入的 NAS 地址（不能写 127.0.0.1）
-        .replace("__HOSTICON__", HOST + "/icon2.svg"))
+        .replace("__HOSTICON__", HOST + "/icon2.svg")
+        # 公网基地址（可为空字符串：则用相对路径）
+        .replace("__ICONPUB__", PUBLIC))
 
-print("目标:", HOST)
+print("目标:", HOST, "| 公网基地址:", PUBLIC or "(未提供，图标用相对路径)")
 # shell 层先备份一次
 print(ex("cp /host/userdata/db/appstore.db /host/userdata/db/appstore.db.bak-fanctl && echo backup shell ok").get("out", ""))
 run_remote_py(CODE)
