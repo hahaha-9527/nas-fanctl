@@ -127,6 +127,16 @@ python tools/verify.py http://NAS_IP:9700
 **升级 fanctl.py** → 直接替换项目目录里的 fanctl.py，重建容器即可；配置不受影响
 （配置写入为原子操作并自动留 .bak 备份）。
 
+## 相关项目
+
+同系列工具，都在 Centerm Zero 1 Pro（铁牛OS）上实机跑通 —— 纯 Python 标准库、单容器、MIT：
+
+| 项目 | 用途 |
+| --- | --- |
+| [nas-appinstall](https://github.com/hahaha-9527/nas-appinstall) | 网页版 `.tpk` 上传口子：把本地应用包注册进应用中心并完成安装 / 升级 |
+| [nas-tieniuled](https://github.com/hahaha-9527/nas-tieniuled) | 机箱电源灯 / 硬盘灯的可视化控制台 |
+| [nas-cloudmount](https://github.com/hahaha-9527/nas-cloudmount) | 网盘挂载：用 rclone 把 AList 的 WebDAV 桥接成 NAS 上的真实目录 |
+
 ## 版本记录
 
 各版本的新增与修复详见 [CHANGELOG.md](CHANGELOG.md)。
