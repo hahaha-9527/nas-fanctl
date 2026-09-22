@@ -136,6 +136,7 @@ python tools/verify.py http://NAS_IP:9700
 | [nas-appinstall](https://github.com/hahaha-9527/nas-appinstall) | 网页版 `.tpk` 上传口子：把本地应用包注册进应用中心并完成安装 / 升级 |
 | [nas-tieniuled](https://github.com/hahaha-9527/nas-tieniuled) | 机箱电源灯 / 硬盘灯的可视化控制台 |
 | [nas-cloudmount](https://github.com/hahaha-9527/nas-cloudmount) | 网盘挂载：用 rclone 把 AList 的 WebDAV 桥接成 NAS 上的真实目录 |
+| [nas-upsmgr](https://github.com/hahaha-9527/nas-upsmgr) | UPS 电源管理：市电 / 电量监控，断电自动安全关机 |
 
 ## 版本记录
 
